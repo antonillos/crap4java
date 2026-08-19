@@ -14,16 +14,18 @@ final class CoverageRunner {
         this.executor = executor;
     }
 
-    void generateCoverage(Path projectRoot) throws Exception {
+    void generateCoverage(Path projectRoot, String buildTool) throws Exception {
         deleteIfExists(projectRoot.resolve("target/site/jacoco"));
         deleteIfExists(projectRoot.resolve("target/jacoco.exec"));
 
-        int exit = executor.run(List.of(
-                "mvn", "-q",
-                "org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent",
-                "test",
-                "org.jacoco:jacoco-maven-plugin:0.8.12:report"
-        ), projectRoot);
+        List<String> command = buildTool.equals("makevn")
+                ? List.of("makevn", "verify-ut-coverage", "--compact")
+                : List.of(
+                        "mvn", "-q",
+                        "org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent",
+                        "test",
+                        "org.jacoco:jacoco-maven-plugin:0.8.12:report");
+        int exit = executor.run(command, projectRoot);
         if (exit != 0) {
             throw new IllegalStateException("Coverage command failed with exit " + exit);
         }

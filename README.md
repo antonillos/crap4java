@@ -1,104 +1,99 @@
 # crap4java
 
-`crap4java` is a standalone CRAP metric tool for Java projects, modeled after `crap4clj`.
+`crap4java` is a standalone Java command-line tool that combines cyclomatic
+complexity with JaCoCo method coverage to calculate CRAP scores.
 
 ## Maintained fork
 
-This repository is a maintained fork of `unclebob/crap4java`.
-It keeps the original CRAP calculation and Java AST analysis, but adds an
-agent- and CI-oriented execution contract:
+This repository is a maintained fork of [unclebob/crap4java](https://github.com/unclebob/crap4java).
+The original analysis and CRAP formula are preserved. This fork adds:
 
-- stable JSON output for local scripts and cross-language report aggregation;
-- analysis of an existing JaCoCo XML report through `--jacoco-xml`, so test and
-  coverage execution can be owned by an external build orchestrator such as
-  `makevn`;
-- `--report-only` mode for non-blocking quality reports;
-- configurable thresholds through `--threshold`;
-- source file and start/end line locations in every JSON entry;
-- machine-readable summary counts for covered, missing-coverage, and threshold
-  violation entries.
+- stable JSON output with source locations and summary counts;
+- optional analysis of an existing JaCoCo XML report;
+- `--report-only` mode for non-blocking reports;
+- configurable CRAP thresholds;
+- optional `makevn` coverage execution for Maven projects.
 
-The fork deliberately does not require an AI agent to parse raw reports. The
-command generates structured artifacts locally so any automation only needs to
-invoke the tool and inspect a bounded summary.
+These additions are maintained in this fork and are not presented as features
+of the upstream project.
 
-The original project and this fork are related by source provenance. The fork
-maintains its own changes and documents them here rather than presenting these
-additional capabilities as part of the upstream project.
+## Requirements
 
-It combines method cyclomatic complexity with JaCoCo method coverage and reports CRAP scores.
-On each run it deletes stale coverage artifacts, runs coverage, then analyzes the selected files.
+- Java 17 or newer
+- Maven, or [makevn](https://github.com/antonillos/makevn) when using
+  `--build-tool makevn`
 
-## Formula
+## Build and test
 
-`CRAP = CC^2 * (1 - coverage)^3 + CC`
-
-- `CC` is cyclomatic complexity.
-- `coverage` is method coverage fraction from JaCoCo `INSTRUCTION` counters.
-
-## Coverage Pipeline
-
-For each invocation:
-
-1. Delete stale coverage artifacts:
-   - `target/site/jacoco/`
-   - `target/jacoco.exec`
-2. Run `mvn -q org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent test org.jacoco:jacoco-maven-plugin:0.8.12:report`
-3. Read `target/site/jacoco/jacoco.xml`
-4. Analyze selected Java files
-
-## Build and Test
+Using Maven:
 
 ```bash
 mvn test
-```
-
-## Run
-
-Build the jar:
-
-```bash
 mvn -DskipTests package
 ```
 
-From the project root you want to analyze:
+Using makevn:
 
 ```bash
-java -jar target/crap4java-0.1.0-SNAPSHOT.jar
+makevn init
+makevn test
+makevn package
 ```
 
-## CLI
+The resulting executable JAR is `target/crap4java-0.1.0-SNAPSHOT.jar`.
+
+## Usage
+
+Run from the root of the Java project being analyzed:
+
+```bash
+java -jar /path/to/crap4java.jar
+java -jar /path/to/crap4java.jar --changed
+java -jar /path/to/crap4java.jar src/main/java/demo/Sample.java
+```
+
+By default, crap4java runs tests with JaCoCo and reads
+`target/site/jacoco/jacoco.xml`. To delegate coverage execution to makevn:
+
+```bash
+java -jar /path/to/crap4java.jar --build-tool makevn
+```
+
+For a pre-generated JaCoCo report, no build tool is required:
+
+```bash
+java -jar /path/to/crap4java.jar \
+  --format json \
+  --jacoco-xml target/site/jacoco/jacoco.xml \
+  --report-only
+```
+
+## CLI options
 
 ```text
 --help                Print usage to stdout
 (no args)             Analyze all Java files under src/
 --changed             Analyze changed Java files under src/
-<file ...>            Analyze only these files
-<directory ...>       Analyze all Java files under each directory's src/ subtree
---format json         Emit a machine-readable JSON report
---jacoco-xml <path>   Analyze an existing JaCoCo XML report without running Maven
+<file ...>            Analyze only the supplied files or directories
+--format human|json   Select human-readable or machine-readable output
+--jacoco-xml <path>   Use an existing JaCoCo XML report
+--build-tool <tool>   Use maven (default) or makevn for coverage execution
 --report-only         Report threshold violations without failing
 --threshold <number>  Set the CRAP threshold (default: 8.0)
 ```
 
-Examples:
+## Formula
 
-```bash
-java -jar target/crap4java-0.1.0-SNAPSHOT.jar --help
-java -jar target/crap4java-0.1.0-SNAPSHOT.jar
-java -jar target/crap4java-0.1.0-SNAPSHOT.jar --changed
-java -jar target/crap4java-0.1.0-SNAPSHOT.jar src/main/java/demo/Sample.java
-java -jar target/crap4java-0.1.0-SNAPSHOT.jar module-a module-b
-java -jar target/crap4java-0.1.0-SNAPSHOT.jar --format json --jacoco-xml target/site/jacoco/jacoco.xml --report-only
-```
+`CRAP = CC^2 * (1 - coverage)^3 + CC`
+
+`CC` is cyclomatic complexity and `coverage` is the method coverage fraction
+reported by JaCoCo.
 
 ## Exit codes
 
-- `0` success, threshold respected
-- `1` invalid CLI usage
-- `2` CRAP threshold exceeded (`> 8.0`)
+- `0`: analysis completed and the threshold was respected;
+- `1`: invalid command-line usage;
+- `2`: the threshold was exceeded, unless `--report-only` was supplied.
 
-## Notes
-
-- If JaCoCo XML is missing, coverage is reported as `N/A`.
-- Report output is sorted by CRAP descending, with `N/A` at the bottom.
+If JaCoCo XML is unavailable, coverage is reported as `N/A`. Reports are
+sorted by CRAP score descending.

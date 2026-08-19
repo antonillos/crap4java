@@ -73,4 +73,17 @@ class CliArgumentsParserTest {
         assertTrue(args.reportOnly());
         assertEquals(12.5, args.threshold(), 0.001);
     }
+
+    @Test
+    void parsesMakevnBuildTool() {
+        CliArguments args = CliArgumentsParser.parse(new String[]{"--build-tool", "makevn"});
+
+        assertEquals("makevn", args.buildTool());
+    }
+
+    @Test
+    void rejectsUnknownBuildTool() {
+        assertThrows(IllegalArgumentException.class,
+                () -> CliArgumentsParser.parse(new String[]{"--build-tool", "gradle"}));
+    }
 }

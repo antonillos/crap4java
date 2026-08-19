@@ -26,6 +26,10 @@ final class CliArgumentsParser {
         String jacocoValue = valueFor(args, "--jacoco-xml", null);
         Path jacocoXml = jacocoValue == null ? null : Path.of(jacocoValue);
         boolean reportOnly = containsFlag(args, "--report-only");
+        String buildTool = valueFor(args, "--build-tool", "maven");
+        if (!buildTool.equals("maven") && !buildTool.equals("makevn")) {
+            throw new IllegalArgumentException("--build-tool must be maven or makevn");
+        }
         String thresholdValue = valueFor(args, "--threshold", "8.0");
         double threshold;
         try {
@@ -39,12 +43,12 @@ final class CliArgumentsParser {
         List<String> values = nonFlagArgs(args);
         ensureChangedIsNotCombined(changed, values);
         if (changed) {
-            return new CliArguments(CliMode.CHANGED_SRC, List.of(), format, jacocoXml, reportOnly, threshold);
+            return new CliArguments(CliMode.CHANGED_SRC, List.of(), format, jacocoXml, reportOnly, threshold, buildTool);
         }
         if (values.isEmpty()) {
-            return new CliArguments(CliMode.ALL_SRC, List.of(), format, jacocoXml, reportOnly, threshold);
+            return new CliArguments(CliMode.ALL_SRC, List.of(), format, jacocoXml, reportOnly, threshold, buildTool);
         }
-        return new CliArguments(CliMode.EXPLICIT_FILES, List.copyOf(values), format, jacocoXml, reportOnly, threshold);
+        return new CliArguments(CliMode.EXPLICIT_FILES, List.copyOf(values), format, jacocoXml, reportOnly, threshold, buildTool);
     }
 
     private static boolean containsFlag(String[] args, String flag) {
@@ -60,7 +64,8 @@ final class CliArgumentsParser {
         List<String> values = new ArrayList<>();
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            if (arg.equals("--format") || arg.equals("--jacoco-xml") || arg.equals("--threshold")) {
+            if (arg.equals("--format") || arg.equals("--jacoco-xml") || arg.equals("--threshold")
+                    || arg.equals("--build-tool")) {
                 i++;
             } else if (!arg.startsWith("--")) {
                 values.add(arg);

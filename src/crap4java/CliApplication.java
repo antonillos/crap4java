@@ -66,7 +66,7 @@ final class CliApplication {
                     ? moduleRoot.resolve("target/site/jacoco/jacoco.xml")
                     : resolveCoveragePath(moduleRoot, arguments.jacocoXml());
             if (arguments.jacocoXml() == null) {
-                coverageRunner.generateCoverage(moduleRoot);
+                coverageRunner.generateCoverage(moduleRoot, arguments.buildTool());
             }
             if (!Files.exists(jacocoXml)) {
                 err.println("Warning: JaCoCo XML not found at " + jacocoXml + ". Coverage will be N/A.");

@@ -9,10 +9,11 @@ record CliArguments(
         String format,
         Path jacocoXml,
         boolean reportOnly,
-        double threshold
+        double threshold,
+        String buildTool
 ) {
     CliArguments(CliMode mode, List<String> fileArgs) {
-        this(mode, fileArgs, "human", null, false, 8.0);
+        this(mode, fileArgs, "human", null, false, 8.0, "maven");
     }
 }
 

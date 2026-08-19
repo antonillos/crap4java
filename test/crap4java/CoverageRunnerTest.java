@@ -29,7 +29,7 @@ class CoverageRunnerTest {
         RecordingExecutor executor = new RecordingExecutor(0);
         CoverageRunner runner = new CoverageRunner(executor);
 
-        runner.generateCoverage(tempDir);
+        runner.generateCoverage(tempDir, "maven");
 
         assertFalse(Files.exists(jacocoDir));
         assertFalse(Files.exists(exec));
@@ -43,12 +43,23 @@ class CoverageRunnerTest {
     }
 
     @Test
+    void runsMakevnCoverageCommand() throws Exception {
+        RecordingExecutor executor = new RecordingExecutor(0);
+        CoverageRunner runner = new CoverageRunner(executor);
+
+        runner.generateCoverage(tempDir, "makevn");
+
+        assertEquals(List.of("makevn", "verify-ut-coverage", "--compact"), executor.commands.get(0));
+        assertEquals(tempDir, executor.directories.get(0));
+    }
+
+    @Test
     void failsWhenCoverageCommandFails() {
         RecordingExecutor executor = new RecordingExecutor(2);
         CoverageRunner runner = new CoverageRunner(executor);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> runner.generateCoverage(tempDir));
+                () -> runner.generateCoverage(tempDir, "maven"));
 
         assertEquals("Coverage command failed with exit 2", ex.getMessage());
     }
