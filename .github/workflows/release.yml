@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (for example v0.1.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark the release as a pre-release"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish JAR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out selected revision
+        uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Install makevn
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/antonillos/makevn/main/packaging/install/install-release.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build and test with makevn
+        run: |
+          makevn init --force
+          makevn test -- -Djacoco.skip=true
+          makevn package -- -DskipTests -Djacoco.skip=true
+
+      - name: Prepare release assets
+        id: assets
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          jar_path="target/crap4java-"*.jar
+          set -- $jar_path
+          test "$#" -eq 1
+          release_version="${RELEASE_TAG#v}"
+          asset="crap4java-${release_version}.jar"
+          cp "$1" "$asset"
+          sha256sum "$asset" > "$asset.sha256"
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_PRERELEASE: ${{ inputs.prerelease }}
+          ASSET: ${{ steps.assets.outputs.asset }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            "$ASSET" \
+            "$ASSET.sha256" \
+            --title "$RELEASE_TAG" \
+            --generate-notes \
+            $([[ "$RELEASE_PRERELEASE" == "true" ]] && printf '%s' '--prerelease')
