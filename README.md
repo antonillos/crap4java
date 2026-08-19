@@ -97,3 +97,9 @@ reported by JaCoCo.
 
 If JaCoCo XML is unavailable, coverage is reported as `N/A`. Reports are
 sorted by CRAP score descending.
+
+## License and security
+
+Original work and modifications in this maintained fork are released under the
+[MIT License](LICENSE). See [SECURITY.md](SECURITY.md) for vulnerability
+reporting and safe-use guidance.
