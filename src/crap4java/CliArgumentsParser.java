@@ -2,6 +2,7 @@ package crap4java;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.file.Path;
 
 final class CliArgumentsParser {
 
@@ -18,12 +19,32 @@ final class CliArgumentsParser {
         }
 
         boolean changed = containsFlag(args, "--changed");
+        String format = valueFor(args, "--format", "human");
+        if (!format.equals("human") && !format.equals("json")) {
+            throw new IllegalArgumentException("--format must be human or json");
+        }
+        String jacocoValue = valueFor(args, "--jacoco-xml", null);
+        Path jacocoXml = jacocoValue == null ? null : Path.of(jacocoValue);
+        boolean reportOnly = containsFlag(args, "--report-only");
+        String thresholdValue = valueFor(args, "--threshold", "8.0");
+        double threshold;
+        try {
+            threshold = Double.parseDouble(thresholdValue);
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("--threshold must be a number");
+        }
+        if (!Double.isFinite(threshold) || threshold < 0.0) {
+            throw new IllegalArgumentException("--threshold must be a finite non-negative number");
+        }
         List<String> values = nonFlagArgs(args);
         ensureChangedIsNotCombined(changed, values);
         if (changed) {
-            return new CliArguments(CliMode.CHANGED_SRC, List.of());
+            return new CliArguments(CliMode.CHANGED_SRC, List.of(), format, jacocoXml, reportOnly, threshold);
         }
-        return new CliArguments(CliMode.EXPLICIT_FILES, List.copyOf(values));
+        if (values.isEmpty()) {
+            return new CliArguments(CliMode.ALL_SRC, List.of(), format, jacocoXml, reportOnly, threshold);
+        }
+        return new CliArguments(CliMode.EXPLICIT_FILES, List.copyOf(values), format, jacocoXml, reportOnly, threshold);
     }
 
     private static boolean containsFlag(String[] args, String flag) {
@@ -37,13 +58,28 @@ final class CliArgumentsParser {
 
     private static List<String> nonFlagArgs(String[] args) {
         List<String> values = new ArrayList<>();
-        for (String arg : args) {
-            if (arg.startsWith("--")) {
-                continue;
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.equals("--format") || arg.equals("--jacoco-xml") || arg.equals("--threshold")) {
+                i++;
+            } else if (!arg.startsWith("--")) {
+                values.add(arg);
             }
-            values.add(arg);
         }
         return values;
+    }
+
+    private static String valueFor(String[] args, String flag, String defaultValue) {
+        for (int i = 0; i < args.length; i++) {
+            if (!flag.equals(args[i])) {
+                continue;
+            }
+            if (i + 1 >= args.length || args[i + 1].startsWith("--")) {
+                throw new IllegalArgumentException(flag + " requires a value");
+            }
+            return args[i + 1];
+        }
+        return defaultValue;
     }
 
     private static void ensureChangedIsNotCombined(boolean changed, List<String> values) {

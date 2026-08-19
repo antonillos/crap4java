@@ -1,8 +1,19 @@
 package crap4java;
 
+import java.nio.file.Path;
 import java.util.List;
 
-record CliArguments(CliMode mode, List<String> fileArgs) {
+record CliArguments(
+        CliMode mode,
+        List<String> fileArgs,
+        String format,
+        Path jacocoXml,
+        boolean reportOnly,
+        double threshold
+) {
+    CliArguments(CliMode mode, List<String> fileArgs) {
+        this(mode, fileArgs, "human", null, false, 8.0);
+    }
 }
 
 /* mutate4java-manifest

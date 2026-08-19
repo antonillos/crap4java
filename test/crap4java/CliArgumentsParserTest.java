@@ -2,10 +2,12 @@ package crap4java;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CliArgumentsParserTest {
 
@@ -54,5 +56,21 @@ class CliArgumentsParserTest {
 
         assertEquals(CliMode.EXPLICIT_FILES, args.mode());
         assertEquals(List.of("src/main/java/demo/A.java"), args.fileArgs());
+    }
+
+    @Test
+    void parsesReportOnlyJsonAndExternalCoverageOptions() {
+        CliArguments args = CliArgumentsParser.parse(new String[]{
+                "--format", "json",
+                "--jacoco-xml", "target/site/jacoco/jacoco.xml",
+                "--report-only",
+                "--threshold", "12.5"
+        });
+
+        assertEquals(CliMode.ALL_SRC, args.mode());
+        assertEquals("json", args.format());
+        assertEquals(Path.of("target/site/jacoco/jacoco.xml"), args.jacocoXml());
+        assertTrue(args.reportOnly());
+        assertEquals(12.5, args.threshold(), 0.001);
     }
 }

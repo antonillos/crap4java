@@ -31,6 +31,10 @@ public final class Main {
                   crap4java            Analyze all Java files under src/
                   crap4java --changed  Analyze changed Java files under src/
                   crap4java <path...>  Analyze files, or for directory args analyze <dir>/src/**/*.java
+                  --format json        Emit a machine-readable JSON report
+                  --jacoco-xml <path>  Analyze an existing JaCoCo XML report
+                  --report-only        Report threshold violations without failing
+                  --threshold <number> Set the CRAP threshold (default: 8.0)
                   crap4java --help     Print this help message
                 """;
     }

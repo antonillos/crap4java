@@ -3,10 +3,17 @@ package crap4java;
 record MethodMetrics(
         String methodName,
         String className,
+        String sourceFile,
+        int startLine,
+        int endLine,
         int complexity,
         Double coveragePercent,
         Double crapScore
 ) {
+    MethodMetrics(String methodName, String className, int complexity,
+                  Double coveragePercent, Double crapScore) {
+        this(methodName, className, null, 0, 0, complexity, coveragePercent, crapScore);
+    }
 }
 
 /* mutate4java-manifest

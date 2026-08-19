@@ -33,29 +33,41 @@ final class CliApplication {
         CliArguments parsed = parse.arguments;
         List<Path> filesToAnalyze = filesForMode(parsed);
         if (filesToAnalyze.isEmpty()) {
-            out.println("No Java files to analyze.");
+            if (parsed.format().equals("json")) {
+                out.print(JsonReportFormatter.format(List.of(), parsed.threshold()));
+            } else {
+                out.println("No Java files to analyze.");
+            }
             return 0;
         }
 
-        List<MethodMetrics> metrics = analyzeByModule(filesToAnalyze);
+        List<MethodMetrics> metrics = analyzeByModule(filesToAnalyze, parsed);
         metrics.sort(Comparator.comparing(MethodMetrics::crapScore,
                 Comparator.nullsLast(Comparator.reverseOrder())));
-        out.print(ReportFormatter.format(metrics));
+        if (parsed.format().equals("json")) {
+            out.print(JsonReportFormatter.format(metrics, parsed.threshold()));
+        } else {
+            out.print(ReportFormatter.format(metrics));
+        }
 
         double max = Main.maxCrap(metrics);
-        if (thresholdExceeded(max)) {
-            err.printf("CRAP threshold exceeded: %.1f > 8.0%n", max);
+        if (!parsed.reportOnly() && thresholdExceeded(max, parsed.threshold())) {
+            err.printf("CRAP threshold exceeded: %.1f > %.1f%n", max, parsed.threshold());
             return 2;
         }
         return 0;
     }
 
-    private List<MethodMetrics> analyzeByModule(List<Path> filesToAnalyze) throws Exception {
+    private List<MethodMetrics> analyzeByModule(List<Path> filesToAnalyze, CliArguments arguments) throws Exception {
         List<MethodMetrics> metrics = new ArrayList<>();
         for (Map.Entry<Path, List<Path>> entry : groupByModuleRoot(filesToAnalyze).entrySet()) {
             Path moduleRoot = entry.getKey();
-            Path jacocoXml = moduleRoot.resolve("target/site/jacoco/jacoco.xml");
-            coverageRunner.generateCoverage(moduleRoot);
+            Path jacocoXml = arguments.jacocoXml() == null
+                    ? moduleRoot.resolve("target/site/jacoco/jacoco.xml")
+                    : resolveCoveragePath(moduleRoot, arguments.jacocoXml());
+            if (arguments.jacocoXml() == null) {
+                coverageRunner.generateCoverage(moduleRoot);
+            }
             if (!Files.exists(jacocoXml)) {
                 err.println("Warning: JaCoCo XML not found at " + jacocoXml + ". Coverage will be N/A.");
             }
@@ -64,8 +76,18 @@ final class CliApplication {
         return metrics;
     }
 
+    static boolean thresholdExceeded(double max, double threshold) {
+        return Double.compare(max, threshold) > 0;
+    }
+
     static boolean thresholdExceeded(double max) {
-        return Double.compare(max, 8.0) > 0;
+        return thresholdExceeded(max, 8.0);
+    }
+
+    private static Path resolveCoveragePath(Path moduleRoot, Path configuredPath) {
+        return configuredPath.isAbsolute()
+                ? configuredPath
+                : moduleRoot.resolve(configuredPath).normalize();
     }
 
     private ParseOutcome parseArguments(String[] args) {

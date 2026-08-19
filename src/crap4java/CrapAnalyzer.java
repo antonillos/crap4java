@@ -31,7 +31,15 @@ final class CrapAnalyzer {
             for (MethodDescriptor method : methods) {
                 Double coverage = lookupCoverage(coverageMap, className, method.name(), method.startLine());
                 Double crap = CrapScore.calculate(method.complexity(), coverage);
-                metrics.add(new MethodMetrics(method.name(), className, method.complexity(), coverage, crap));
+                metrics.add(new MethodMetrics(
+                        method.name(),
+                        className,
+                        projectRoot.relativize(file).toString(),
+                        method.startLine(),
+                        method.endLine(),
+                        method.complexity(),
+                        coverage,
+                        crap));
             }
         }
 
